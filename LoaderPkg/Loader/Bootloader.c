@@ -971,8 +971,8 @@ UefiMain (
   UINTN              EntryPoint;
   VOID               *GateData;
 
-/*
-#if 1 ///< Uncomment to await debugging
+
+#if 0 ///< Uncomment to await debugging
   volatile BOOLEAN   Connected;
   DEBUG ((DEBUG_INFO, "JOS: Awaiting debugger connection\n"));
 
@@ -981,7 +981,7 @@ UefiMain (
     ;
   }
 #endif
-*/
+
 
   Status = gRT->GetTime (&Now, NULL);
   if (EFI_ERROR (Status)) {
