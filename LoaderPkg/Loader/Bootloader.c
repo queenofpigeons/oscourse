@@ -84,8 +84,13 @@ InitGraphics (
   OUT LOADER_PARAMS  *LoaderParams
   )
 {
-  EFI_STATUS                    Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL  *GraphicsOutput;
+  EFI_STATUS                             Status;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL          *GraphicsOutput;
+  UINT32                                 NewModeNumber;
+  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  *ModeInfo;
+  UINTN                                 *SizeOfInfo = NULL;
+  UINT32                                 TargetWidth = 1920;
+  UINT32                                 TargetHeight = 1200;
 
   ASSERT (LoaderParams != NULL);
 
@@ -113,9 +118,25 @@ InitGraphics (
   //
   // Hint: Use GetMode/SetMode functions.
   //
-  DEBUG ((DEBUG_INFO, "MaxMode = %u", GraphicsOutput->Mode->MaxMode));
-  //GraphicsOutput->SetMode(GraphicsOutput, GraphicsOutput->Mode->MaxMode - 1);
-  GraphicsOutput->SetMode(GraphicsOutput, 1);
+
+  //
+  // Set the default mode to current mode
+  //
+  NewModeNumber = GraphicsOutput->Mode->Mode;
+
+  //
+  // Cycle through available modes to match target definition. If not found, set the mode to default
+  //
+  for (UINT32 ModeNumber = 0; ModeNumber < GraphicsOutput->Mode->MaxMode; ModeNumber++) {
+    Status = GraphicsOutput->QueryMode(GraphicsOutput, ModeNumber, SizeOfInfo, &ModeInfo);
+
+    if (ModeInfo->HorizontalResolution == TargetWidth && ModeInfo->VerticalResolution == TargetHeight) {
+      NewModeNumber = ModeNumber;
+      break;
+    }
+  }
+  DEBUG ((DEBUG_INFO, "JOS: New Mode - %u\n", NewModeNumber));
+  GraphicsOutput->SetMode(GraphicsOutput, NewModeNumber);
 
   //
   // Fill screen with black.
