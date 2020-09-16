@@ -129,7 +129,6 @@ InitGraphics (
   //
   for (UINT32 ModeNumber = 0; ModeNumber < GraphicsOutput->Mode->MaxMode; ModeNumber++) {
     Status = GraphicsOutput->QueryMode(GraphicsOutput, ModeNumber, SizeOfInfo, &ModeInfo);
-
     if (ModeInfo->HorizontalResolution == TargetWidth && ModeInfo->VerticalResolution == TargetHeight) {
       NewModeNumber = ModeNumber;
       break;
