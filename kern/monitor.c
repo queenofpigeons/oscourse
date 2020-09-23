@@ -23,6 +23,7 @@ struct Command {
 static struct Command commands[] = {
     {"help", "Display this list of commands", mon_help},
     {"hello", "Display greeting message", mon_hello},
+    {"text", "Display simple text", mon_text},
     {"kerninfo", "Display information about the kernel", mon_kerninfo},
     {"backtrace", "Print stack backtrace", mon_backtrace}};
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
@@ -41,6 +42,12 @@ mon_help(int argc, char **argv, struct Trapframe *tf) {
 int
 mon_hello(int argc, char **argv, struct Trapframe *tf) {
   cprintf("Hello!\n");
+  return 0;
+}
+
+int
+mon_text(int argc, char **argv, struct Trapframe *tf) {
+  cprintf("Text!!!\n");
   return 0;
 }
 

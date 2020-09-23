@@ -101,7 +101,7 @@ ASM_PFX(CallKernelThroughGateAsm):
 AsmWithOurGdt:
 
     ; 3. Reset all the data segment registers to linear mode (LINEAR_DATA_SEL).
-    mov eax, LINEAR_CODE_SEL
+    mov eax, LINEAR_DATA_SEL
     mov ds, ax
     mov gs, ax
     mov fs, ax
