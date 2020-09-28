@@ -124,6 +124,7 @@ AsmWithOurGdt:
     mov ecx, 0xc0000080
     rdmsr
     bts eax, 8
+    bts eax, 11
     wrmsr
 
     ; 7. Enable paging as it is required in 64-bit mode.
