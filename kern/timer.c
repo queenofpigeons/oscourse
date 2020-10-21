@@ -108,6 +108,39 @@ get_rsdp(void) {
 // Obtain and map FADT ACPI table address.
 FADT *
 get_fadt(void) {
+  static void *krsdt = NULL;
+  RSDP *rsd_pointer = get_rsdp();
+  uint64_t rsd_table = 0;
+  int revision = rsd_pointer->Revision;
+  int entry_size = 0;
+  static int entries = 0;
+
+  if (uefi_lp->ACPIRoot == 0)
+    panic("No fadt\n");
+
+  if (revision >= 2) {
+    entry_size = 8;
+    rsd_table = rsd_pointer->XsdtAddress;
+  } else {
+    entry_size = 4;
+    rsd_table = rsd_pointer->RsdtAddress;
+  }
+  if (!krsdt) {
+    krsdt = mmio_map_region(rsd_table, sizeof(RSDT));
+    krsdt = mmio_map_region(rsd_table, ((RSDT *)krsdt)->h.Length);
+    entries = (((RSDT *)krsdt)->h.Length - sizeof(((RSDT *)krsdt)->h)) / entry_size;
+  }
+
+  for (int i = 0; i < entries; i++) {
+      uint64_t h_phys = 0;
+      memcpy(&h_phys, (uint8_t *)((RSDT *)krsdt)->PointerToOtherSDT + i * entry_size, entry_size);
+      ACPISDTHeader *h_virtual;
+
+      h_virtual = mmio_map_region(h_phys, sizeof(ACPISDTHeader));
+      h_virtual = mmio_map_region(h_phys, h_virtual->Length);
+      if (!strncmp(h_virtual->Signature, "FACP", 4))
+          return (FADT*) h_virtual;
+  }
   return NULL;
 }
 
@@ -115,6 +148,39 @@ get_fadt(void) {
 // Obtain and map RSDP ACPI table address.
 HPET *
 get_hpet(void) {
+  static void *krsdt = NULL;
+  RSDP *rsd_pointer = get_rsdp();
+  uint64_t rsd_table = 0;
+  int revision = rsd_pointer->Revision;
+  int entry_size = 0;
+  static int entries = 0;
+
+  if (uefi_lp->ACPIRoot == 0)
+    panic("No hpet\n");
+
+  if (revision >= 2) {
+    entry_size = 8;
+    rsd_table = rsd_pointer->XsdtAddress;
+  } else {
+    entry_size = 4;
+    rsd_table = rsd_pointer->RsdtAddress;
+  }
+  if (!krsdt) {
+    krsdt = mmio_map_region(rsd_table, sizeof(RSDT));
+    krsdt = mmio_map_region(rsd_table, ((RSDT *)krsdt)->h.Length);
+    entries = (((RSDT *)krsdt)->h.Length - sizeof(((RSDT *)krsdt)->h)) / entry_size;
+  }
+
+  for (int i = 0; i < entries; i++) {
+      uint64_t h_phys = 0;
+      memcpy(&h_phys, (uint8_t *)((RSDT *)krsdt)->PointerToOtherSDT + i * entry_size, entry_size);
+      ACPISDTHeader *h_virtual;
+
+      h_virtual = mmio_map_region(h_phys, sizeof(ACPISDTHeader));
+      h_virtual = mmio_map_region(h_phys, h_virtual->Length);
+      if (!strncmp(h_virtual->Signature, "HPET", 4))
+          return (HPET*) h_virtual;
+  }
   return NULL;
 }
 
@@ -214,10 +280,30 @@ hpet_get_main_cnt(void) {
 
 void
 hpet_enable_interrupts_tim0(void) {
+  uint64_t LEG_RT_CNF = 0x2;
+  uint64_t CONF_REG = (1 << 2) | (1 << 3) | (1 << 6);
+
+  hpetReg->GEN_CONF |= LEG_RT_CNF;
+
+  hpetReg->TIM0_CONF = (IRQ_TIMER << 9) | CONF_REG;
+  hpetReg->TIM0_COMP = hpet_get_main_cnt() + Peta / 2 / hpetFemto;
+  hpetReg->TIM0_COMP = Peta / 2 / hpetFemto;
+
+  irq_setmask_8259A(irq_mask_8259A & ~(1 << IRQ_TIMER));
 }
 
 void
 hpet_enable_interrupts_tim1(void) {
+  uint64_t LEG_RT_CNF = 0x2;
+  uint64_t CONF_REG = (1 << 2) | (1 << 3) | (1 << 6);
+
+  hpetReg->GEN_CONF |= LEG_RT_CNF;
+
+  hpetReg->TIM1_CONF = (IRQ_CLOCK << 9) | CONF_REG;
+  hpetReg->TIM1_COMP = hpet_get_main_cnt() + 3 * Peta / 2 / hpetFemto;
+  hpetReg->TIM1_COMP = 3 * Peta / 2 / hpetFemto;
+
+  irq_setmask_8259A(irq_mask_8259A & ~(1 << IRQ_CLOCK));
 }
 
 void
@@ -236,7 +322,19 @@ hpet_handle_interrupts_tim1(void) {
 // about pause instruction.
 uint64_t
 hpet_cpu_frequency(void) {
-  return 0;
+  uint64_t time_res = 100;
+  uint64_t delta = 0, target = hpetFreq / time_res;
+
+  uint64_t tick0 = hpet_get_main_cnt();
+  uint64_t tsc0 = read_tsc();
+  do {
+    asm("pause");
+    delta = hpet_get_main_cnt() - tick0;
+  } while (delta < target);
+
+  uint64_t tsc1 = read_tsc();
+
+  return (tsc1 - tsc0) * time_res;
 }
 
 uint32_t
@@ -253,5 +351,24 @@ pmtimer_get_timeval(void) {
 // can be 24-bit or 32-bit.
 uint64_t
 pmtimer_cpu_frequency(void) {
-  return 0;
+  uint32_t time_res = 100;
+  uint32_t tick0 = pmtimer_get_timeval();
+  uint64_t delta = 0, target = PM_FREQ / time_res;
+
+  uint64_t tsc0 = read_tsc();
+
+  do {
+    asm("pause");
+    uint32_t tick1 = pmtimer_get_timeval();
+    delta = tick1 - tick0;
+    if (-delta <= 0xFFFFFF) {
+      delta += 0xFFFFFF;
+    } else if (tick0 > tick1) {
+      delta += 0xFFFFFFFF;
+    }
+  } while (delta < target);
+
+  uint64_t tsc1 = read_tsc();
+
+  return (tsc1 - tsc0) * PM_FREQ / delta;
 }
