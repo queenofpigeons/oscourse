@@ -104,10 +104,8 @@ get_rsdp(void) {
   return krsdp;
 }
 
-// LAB 5: Your code here.
-// Obtain and map FADT ACPI table address.
-FADT *
-get_fadt(void) {
+void *
+find_endtry_by_signature(char *sig) {
   static void *krsdt = NULL;
   RSDP *rsd_pointer = get_rsdp();
   uint64_t rsd_table = 0;
@@ -116,7 +114,7 @@ get_fadt(void) {
   static int entries = 0;
 
   if (uefi_lp->ACPIRoot == 0)
-    panic("No fadt\n");
+    panic("No ACPIRoot\n");
 
   if (revision >= 2) {
     entry_size = 8;
@@ -138,50 +136,25 @@ get_fadt(void) {
 
       h_virtual = mmio_map_region(h_phys, sizeof(ACPISDTHeader));
       h_virtual = mmio_map_region(h_phys, h_virtual->Length);
-      if (!strncmp(h_virtual->Signature, "FACP", 4))
-          return (FADT*) h_virtual;
+      if (!strncmp(h_virtual->Signature, sig, 4))
+          return h_virtual;
   }
   return NULL;
 }
 
 // LAB 5: Your code here.
+// Obtain and map FADT ACPI table address.
+FADT *
+get_fadt(void) {
+  return find_endtry_by_signature("FACP");
+}
+
+// LAB 5: Your code here.
 // Obtain and map RSDP ACPI table address.
+
 HPET *
 get_hpet(void) {
-  static void *krsdt = NULL;
-  RSDP *rsd_pointer = get_rsdp();
-  uint64_t rsd_table = 0;
-  int revision = rsd_pointer->Revision;
-  int entry_size = 0;
-  static int entries = 0;
-
-  if (uefi_lp->ACPIRoot == 0)
-    panic("No hpet\n");
-
-  if (revision >= 2) {
-    entry_size = 8;
-    rsd_table = rsd_pointer->XsdtAddress;
-  } else {
-    entry_size = 4;
-    rsd_table = rsd_pointer->RsdtAddress;
-  }
-  if (!krsdt) {
-    krsdt = mmio_map_region(rsd_table, sizeof(RSDT));
-    krsdt = mmio_map_region(rsd_table, ((RSDT *)krsdt)->h.Length);
-    entries = (((RSDT *)krsdt)->h.Length - sizeof(((RSDT *)krsdt)->h)) / entry_size;
-  }
-
-  for (int i = 0; i < entries; i++) {
-      uint64_t h_phys = 0;
-      memcpy(&h_phys, (uint8_t *)((RSDT *)krsdt)->PointerToOtherSDT + i * entry_size, entry_size);
-      ACPISDTHeader *h_virtual;
-
-      h_virtual = mmio_map_region(h_phys, sizeof(ACPISDTHeader));
-      h_virtual = mmio_map_region(h_phys, h_virtual->Length);
-      if (!strncmp(h_virtual->Signature, "HPET", 4))
-          return (HPET*) h_virtual;
-  }
-  return NULL;
+  return find_endtry_by_signature("HPET");
 }
 
 // Getting physical HPET timer address from its table.
