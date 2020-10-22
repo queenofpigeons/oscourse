@@ -82,8 +82,8 @@ sys_yield:
 .type  sys_exit, @function
 sys_exit:
   cli
-  leaq bootstacktop(%rip),%rsp # в rsp загружаем адрес(leaq) bootstacktop относительно rip
-  xor %ebp, %ebp # снова зануляем регистр (xor одинаковых значений). % означает, что это имя регистра
+  leaq bootstacktop(%rip),%rsp
+  xor %ebp, %ebp
   call csys_exit
 jmp .
 #endif
