@@ -165,14 +165,33 @@ boot_alloc(uint32_t n) {
   // the first virtual address that the linker did *not* assign
   // to any kernel code or global variables.
 
+  if (!nextfree) {
+    extern char end[];
+    nextfree = ROUNDUP((char *) end, PGSIZE);
+  }
+
   // Allocate a chunk large enough to hold 'n' bytes, then update
   // nextfree.  Make sure nextfree is kept aligned
   // to a multiple of PGSIZE.
   //
   // LAB 6: Your code here.
 
-  (void)nextfree;
-  return NULL;
+  if (!n)
+    return nextfree;
+
+  int alloc_pages = n / PGSIZE;
+  if (n % PGSIZE) {
+    alloc_pages++;
+  }
+
+  char *result = nextfree;
+  nextfree += alloc_pages * PGSIZE;
+
+  if (nextfree > (char *)(npages * PGSIZE + KERNBASE)) {
+    panic("Out of memory!");
+  }
+
+  return result;
 }
 
 // Set up a two-level page table:
@@ -216,6 +235,8 @@ mem_init(void) {
   // array.  'npages' is the number of physical pages in memory.  Use memset
   // to initialize all fields of each struct PageInfo to 0.
   // LAB 6: Your code here.
+
+  pages = 
 
   //////////////////////////////////////////////////////////////////////
   // Now that we've allocated the initial kernel data structures, we set
