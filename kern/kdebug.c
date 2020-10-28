@@ -94,6 +94,7 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
   return 0;
 }
 
+#ifdef CONFIG_KSPACE
 uintptr_t
 find_function(const char *const fname) {
   // There are two functions for function name lookup.
@@ -127,3 +128,4 @@ find_function(const char *const fname) {
   }
   return 0;
 }
+#endif

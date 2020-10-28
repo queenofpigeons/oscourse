@@ -301,6 +301,8 @@ bind_functions(struct Env *e, uint8_t *binary) {
 // load_icode panics if it encounters problems.
 //  - How might load_icode fail?  What might be wrong with the given input?
 //
+
+#ifdef CONFIG_KSPACE
 static void
 load_icode(struct Env *e, uint8_t *binary) {
   // Hints:
@@ -350,6 +352,7 @@ load_icode(struct Env *e, uint8_t *binary) {
     bind_functions(e, binary);
   }
 }
+#endif
 //
 // Allocates a new env with env_alloc, loads the named elf
 // binary into it with load_icode, and sets its env_type.
@@ -357,6 +360,7 @@ load_icode(struct Env *e, uint8_t *binary) {
 // before running the first user-mode environment.
 // The new env's parent ID is set to 0.
 //
+#ifdef CONFIG_KSPACE
 void
 env_create(uint8_t *binary, enum EnvType type) {
   // LAB 3: Your code here.
@@ -368,6 +372,7 @@ env_create(uint8_t *binary, enum EnvType type) {
 
   load_icode(e, binary);
 }
+#endif
 
 //
 // Frees env e and all memory it uses.
