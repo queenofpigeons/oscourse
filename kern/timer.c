@@ -105,7 +105,7 @@ get_rsdp(void) {
 }
 
 void *
-find_endtry_by_signature(char *sig) {
+find_entry_by_signature(char *sig) {
   static void *krsdt = NULL;
   RSDP *rsd_pointer = get_rsdp();
   uint64_t rsd_table = 0;
@@ -146,7 +146,7 @@ find_endtry_by_signature(char *sig) {
 // Obtain and map FADT ACPI table address.
 FADT *
 get_fadt(void) {
-  return find_endtry_by_signature("FACP");
+  return find_entry_by_signature("FACP");
 }
 
 // LAB 5: Your code here.
@@ -154,7 +154,7 @@ get_fadt(void) {
 
 HPET *
 get_hpet(void) {
-  return find_endtry_by_signature("HPET");
+  return find_entry_by_signature("HPET");
 }
 
 // Getting physical HPET timer address from its table.

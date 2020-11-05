@@ -39,7 +39,8 @@ test_alloc(uint8_t nbytes) {
 
   spin_lock(&kernel_lock);
 
-  if (freep == NULL) { /* no free list yet */
+  if (freep == NULL) {
+     /* no free list yet */
     ((Header *)&space)->s.next = (Header *)&base;
     ((Header *)&space)->s.prev = (Header *)&base;
     ((Header *)&space)->s.size = (SPACE_SIZE - sizeof(Header)) / sizeof(Header);
