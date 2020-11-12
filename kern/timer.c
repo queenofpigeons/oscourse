@@ -126,7 +126,7 @@ find_entry_by_signature(char *sig) {
   }
   if (!krsdt) {
     krsdt = mmio_map_region(rsd_table, sizeof(RSDT));
-    krsdt = mmio_map_region(rsd_table, ((RSDT *)krsdt)->h.Length);
+    krsdt = mmio_remap_last_region(rsd_table, krsdt, sizeof(ACPISDTHeader), ((RSDT *)krsdt)->h.Length);
     entries = (((RSDT *)krsdt)->h.Length - sizeof(((RSDT *)krsdt)->h)) / entry_size;
   }
 
@@ -136,7 +136,7 @@ find_entry_by_signature(char *sig) {
       ACPISDTHeader *h_virtual;
 
       h_virtual = mmio_map_region(h_phys, sizeof(ACPISDTHeader));
-      h_virtual = mmio_map_region(h_phys, h_virtual->Length);
+      h_virtual = mmio_remap_last_region(h_phys, h_virtual, sizeof(ACPISDTHeader), ((RSDT *)krsdt)->h.Length);
       if (!strncmp(h_virtual->Signature, sig, 4))
           return h_virtual;
   }

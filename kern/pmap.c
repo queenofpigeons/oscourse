@@ -787,13 +787,15 @@ tlb_invalidate(pml4e_t *pml4e, void *va) {
 // location.  Return the base of the reserved region.  size does *not*
 // have to be multiple of PGSIZE.
 //
+
+static uintptr_t base = MMIOBASE;
+
 void *
 mmio_map_region(physaddr_t pa, size_t size) {
   // Where to start the next region.  Initially, this is the
   // beginning of the MMIO region.  Because this is static, its
   // value will be preserved between calls to mmio_map_region
   // (just like nextfree in boot_alloc).
-  static uintptr_t base = MMIOBASE;
 
   // Reserve size bytes of virtual memory starting at base and
   // map physical pages [pa,pa+size) to virtual addresses
@@ -813,9 +815,29 @@ mmio_map_region(physaddr_t pa, size_t size) {
   // Hint: The staff solution uses boot_map_region.
   //
   // LAB 6: Your code here:
+  uintptr_t pa2 = ROUNDDOWN(pa, PGSIZE);
+  if (base + size >= MMIOLIM)
+    panic("Allocated MMIO addr is too high! [0x%016lu;0x%016lu]", pa, pa + size);
+
+  size = ROUNDUP(size + (pa - pa2), PGSIZE);
+  boot_map_region(kern_pml4e, base, size, pa2, PTE_PCD | PTE_PWT | PTE_W);
+
+  void *new = (void *)base;
+  base += size;
+  return new;
 
   (void)base;
   return NULL;
+}
+
+void *
+mmio_remap_last_region(physaddr_t pa, void *addr, size_t oldsize, size_t newsize) {
+
+  oldsize               = ROUNDUP((uintptr_t)addr + oldsize, PGSIZE) - (uintptr_t)addr;
+  if (base - oldsize != (uintptr_t)addr)
+    panic("Can't remap region");
+  base = (uintptr_t)addr;
+  return mmio_map_region(pa, newsize);
 }
 
 // --------------------------------------------------------------
