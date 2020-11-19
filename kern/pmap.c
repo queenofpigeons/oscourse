@@ -824,7 +824,7 @@ mmio_map_region(physaddr_t pa, size_t size) {
 
   void *new = (void *)base;
   base += size;
-  return new + pa - pa2;
+  return new;
 }
 
 // --------------------------------------------------------------
