@@ -254,6 +254,9 @@ mem_init(void) {
   // Make 'envs' point to an array of size 'NENV' of 'struct Env'.
   // LAB 8: Your code here.
 
+  envs = (struct Env *) boot_alloc(NENV * sizeof(struct Env));
+	memset(envs, 0, NENV * sizeof(struct Env));
+
   //////////////////////////////////////////////////////////////////////
   // Now that we've allocated the initial kernel data structures, we set
   // up the list of free physical pages. Once we've done so, all further
@@ -286,6 +289,8 @@ mem_init(void) {
   //    - the new image at UENVS  -- kernel R, user R
   //    - envs itself -- kernel RW, user NONE
   // LAB 8: Your code here.
+
+  boot_map_region(kern_pml4e, UENVS, ROUNDUP(NENV * sizeof(*envs), PGSIZE), PADDR(envs), PTE_U | PTE_P);
 
   //////////////////////////////////////////////////////////////////////
   // Use the physical memory that 'bootstack' refers to as the kernel
@@ -862,6 +867,23 @@ static uintptr_t user_mem_check_addr;
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm) {
   // LAB 8: Your code here.
+
+  perm |= PTE_P;
+
+  const void *end = (void*) ROUNDUP(va+len, PGSIZE);
+  const void *va_b = va;
+  va = (void*) ROUNDDOWN(va, PGSIZE);
+  for (; va < end; va += PGSIZE) {
+    pte_t *pte = pml4e_walk(env->env_pml4e, va, 0);
+    if (!pte || (*pte & perm) != perm ) {
+      user_mem_check_addr = (uintptr_t) MAX(va, va_b);
+      return -E_FAULT;
+    }
+    if ((uintptr_t) va > ULIM) {
+      user_mem_check_addr = MAX(ULIM, (uintptr_t)va_b);
+      return -E_FAULT;
+    }
+  }
 
   return 0;
 }

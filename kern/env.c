@@ -202,6 +202,14 @@ env_setup_vm(struct Env *e) {
 
   // LAB 8: Your code here.
 
+  e->env_pml4e = page2kva(p);
+  e->env_cr3 = page2pa(p);
+
+  e->env_pml4e[1] = kern_pml4e[1];
+  pa2page(PTE_ADDR(kern_pml4e[1]))->pp_ref++;
+
+  e->env_pml4e[2] = e->env_cr3 | PTE_P | PTE_U;
+
   return 0;
 }
 
@@ -302,13 +310,31 @@ env_alloc(struct Env **newenv_store, envid_t parent_id) {
 //
 static void
 region_alloc(struct Env *e, void *va, size_t len) {
-  // LAB 8: Your code here.
+    // LAB 8: Your code here.
   // (But only if you need it for load_icode.)
   //
   // Hint: It is easier to use region_alloc if the caller can pass
   //   'va' and 'len' values that are not page-aligned.
   //   You should round va down, and round (va + len) up.
   //   (Watch out for corner-cases!)
+  void *begin = ROUNDDOWN(va, PGSIZE);
+  void *end = ROUNDUP(va + len, PGSIZE);
+
+  if ((uint64_t)end > UTOP) {
+      panic("Not enough memory to allocate pages");
+  }
+
+  while (begin < end) {
+    struct PageInfo *pp;
+
+    pp = page_alloc(0);
+    if (!pp) {
+        panic("Not enough memoty");
+    }
+
+    page_insert(e->env_pml4e, pp, begin, PTE_U | PTE_W);
+    begin += PGSIZE;
+  }
 }
 
 #ifdef SANITIZE_USER_SHADOW_BASE
@@ -411,7 +437,6 @@ bind_functions(struct Env *e, uint8_t *binary) {
 //  - How might load_icode fail?  What might be wrong with the given input?
 //
 
-#ifdef CONFIG_KSPACE
 static void
 load_icode(struct Env *e, uint8_t *binary) {
   // Hints:
@@ -445,7 +470,6 @@ load_icode(struct Env *e, uint8_t *binary) {
   // LAB 3: Your code here.
   // LAB 8: Your code here.
 
-}
 
   // Checking elf magic value
   if (((struct Elf*)binary)->e_magic != ELF_MAGIC)
@@ -457,6 +481,8 @@ load_icode(struct Env *e, uint8_t *binary) {
   uint8_t *pht_start = binary + ((struct Elf*)binary)->e_phoff;
   struct Proghdr *ph = (struct Proghdr *)pht_start;
 
+  lcr3(PADDR(e->env_pml4e));
+
   //
   // We need to cycle through phnum entries from Program header table, that has an offset of e_phoff
   // Program header table is always present as this is a Loadable ELF file
@@ -464,16 +490,24 @@ load_icode(struct Env *e, uint8_t *binary) {
   for (uint16_t i = 0; i < phnum; i++) {
     if (ph->p_type != ELF_PROG_LOAD)
       continue;
+
+    region_alloc(e, (void *)ph->p_va, ph->p_memsz);
     memmove((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
     memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
     ph++;
-    //Set the rip register value to entry
-    e->env_tf.tf_rip = entry;
 
-    bind_functions(e, binary);
   }
+  lcr3(PADDR(kern_pml4e));
+  //Set the rip register value to entry
+  e->env_tf.tf_rip = entry;
+
+  #ifdef CONFIG_KSPACE
+  bind_functions(e, binary);
+  #endif
+
+  region_alloc(e, (void *) (USTACKTOP - USTACKSIZE), USTACKSIZE);
 }
-#endif
+
 //
 // Allocates a new env with env_alloc, loads the named elf
 // binary into it with load_icode, and sets its env_type.
@@ -481,7 +515,7 @@ load_icode(struct Env *e, uint8_t *binary) {
 // before running the first user-mode environment.
 // The new env's parent ID is set to 0.
 //
-#ifdef CONFIG_KSPACE
+
 void
 env_create(uint8_t *binary, enum EnvType type) {
   // LAB 3: Your code here.
@@ -491,9 +525,10 @@ env_create(uint8_t *binary, enum EnvType type) {
   if (status == -E_NO_FREE_ENV || status == -E_NO_FREE_ENV)
     panic("env_alloc: %i", status);
 
+  e->env_type = type;
+
   load_icode(e, binary);
 }
-#endif
 
 //
 // Frees env e and all memory it uses.
@@ -713,6 +748,8 @@ env_run(struct Env *e) {
   curenv = e;
   curenv->env_status = ENV_RUNNING;
   curenv->env_runs++;
+
+  lcr3(curenv->env_cr3);
 
   env_pop_tf(&curenv->env_tf);
 
