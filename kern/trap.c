@@ -301,20 +301,12 @@ page_fault_handler(struct Trapframe *tf) {
   // Handle kernel-mode page faults.
 
   // LAB 8: Your code here.
-<<<<<<< HEAD
   if (!(tf->tf_cs & 3)) {
 		panic("page fault");
 	}
 
-	cprintf(".%08x. user fault va %08lx ip %08lx\n",
-		curenv->env_id, fault_va, tf->tf_rip);
-	print_trapframe(tf);
-	env_destroy(curenv);
-=======
-
   // We've already handled kernel-mode exceptions, so if we get here,
   // the page fault happened in user mode.
->>>>>>> lab9
 
   // Call the environment's page fault upcall, if one exists.  Set up a
   // page fault stack frame on the user exception stack (below
@@ -345,4 +337,33 @@ page_fault_handler(struct Trapframe *tf) {
   //   (the 'tf' variable points at 'curenv->env_tf').
 
   // LAB 9: Your code here.
+  struct UTrapframe *utf;
+  uintptr_t uxrsp;
+
+  if (curenv->env_pgfault_upcall) {
+    uxrsp = UXSTACKTOP;
+    if (tf->tf_rsp < UXSTACKTOP && tf->tf_rsp >= UXSTACKTOP - PGSIZE) {
+      uxrsp = tf->tf_rsp - sizeof(uintptr_t);
+    }
+    uxrsp -= sizeof(struct UTrapframe);
+    utf = (struct UTrapframe*) uxrsp;
+
+    user_mem_assert(curenv, utf, sizeof (struct UTrapframe), PTE_W);
+
+    utf->utf_fault_va = fault_va;
+    utf->utf_err = tf->tf_err;
+    utf->utf_regs = tf->tf_regs;
+    utf->utf_rip = tf->tf_rip;
+    utf->utf_rflags = tf->tf_rflags;
+    utf->utf_rsp = tf->tf_rsp;
+    tf->tf_rsp = uxrsp;
+    tf->tf_rip = (uintptr_t)curenv->env_pgfault_upcall;
+    env_run(curenv);
+  }
+
+
+	cprintf(".%08x. user fault va %08lx ip %08lx\n",
+		curenv->env_id, fault_va, tf->tf_rip);
+	print_trapframe(tf);
+	env_destroy(curenv);
 }
