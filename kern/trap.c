@@ -309,7 +309,7 @@ page_fault_handler(struct Trapframe *tf) {
   struct UTrapframe *utf;
   uintptr_t uxrsp;
 
-  if (curenv->envtrap) {
+  if (curenv->env_pgfault_upcall) {
     uxrsp = UXSTACKTOP;
     if (tf->tf_rsp < UXSTACKTOP && tf->tf_rsp >= UXSTACKTOP - PGSIZE) {
       uxrsp = tf->tf_rsp - sizeof(uintptr_t);
