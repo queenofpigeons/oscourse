@@ -76,17 +76,18 @@ duppage(envid_t envid, uintptr_t pn) {
   pte_t ent = uvpt[pn] & PTE_SYSCALL;
   int r;
   envid_t id = sys_getenvid();
+  void *address = (void *)(pn * PGSIZE);
 
   if (ent & (PTE_W | PTE_COW)) {
     ent = (ent | PTE_COW) & ~PTE_W;
-    r = sys_page_map(id, (void *)(pn * PGSIZE), envid, (void *)(pn * PGSIZE), ent);
+    r = sys_page_map(id, address, envid, address, ent);
 
     if (r < 0) {
       return r;
     }
-    r = sys_page_map(id, (void *)(pn * PGSIZE), id, (void *)(pn * PGSIZE), ent);
+    r = sys_page_map(id, address, id, address, ent);
   } else {
-    r = sys_page_map(id, (void *)(pn * PGSIZE), envid, (void *)(pn * PGSIZE), ent);
+    r = sys_page_map(id, address, envid, address, ent);
   }
 
   return r;
