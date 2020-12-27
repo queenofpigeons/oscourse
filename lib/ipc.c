@@ -71,7 +71,9 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm) {
     }
     sys_yield();
   }
-  //sys_yield();
+
+  // last one
+  sys_yield();
 }
 
 // Find the first environment of the given type.  We'll use this to

@@ -7,6 +7,8 @@
 // It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
 #define PTE_COW 0x800
 
+extern void _pgfault_upcall(void);
+
 //
 // Custom page fault handler - if faulting page is copy-on-write,
 // map in our own private writable copy.
@@ -78,7 +80,12 @@ duppage(envid_t envid, uintptr_t pn) {
   envid_t id = sys_getenvid();
   void *address = (void *)(pn * PGSIZE);
 
-  if (ent & (PTE_W | PTE_COW)) {
+  if (uvpt[pn] & PTE_SHARE) {
+    if ((r = sys_page_map(0, (void *)(pn * PGSIZE), envid, (void *)(pn * PGSIZE), ent)) < 0) {
+      panic("duppage error: sys_page_map PTE_SHARE: %i\n", r);
+    }
+
+  } else if (ent & (PTE_W | PTE_COW)) {
     ent = (ent | PTE_COW) & ~PTE_W;
     r = sys_page_map(id, address, envid, address, ent);
 

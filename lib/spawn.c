@@ -103,7 +103,10 @@ spawn(const char *prog, const char **argv) {
   child_tf        = envs[ENVX(child)].env_tf;
   child_tf.tf_rip = elf->e_entry;
 
-  if ((r = init_stack(child, argv, &child_tf.tf_rsp)) < 0)
+  // *p to avoid "error: taking address of packed member of
+  //    ‘struct Trapframe’ may result in an unaligned pointer value"
+  void *p = &child_tf.tf_rsp;
+  if ((r = init_stack(child, argv, p)) < 0)
     return r;
 
   // Set up program segments as defined in ELF header.
@@ -324,6 +327,17 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
 // Copy the mappings for shared pages into the child address space.
 static int
 copy_shared_pages(envid_t child) {
-  // LAB 11: Your code here.
-  return 0;
+
+  int err = 0;
+  for (size_t i = 0; i < UTOP; i += PGSIZE) {
+    if (!(uvpml4e[VPML4E(i)] & PTE_P) || !(uvpde[VPDPE(i)] & PTE_P) || !(uvpd[VPD(i)] & PTE_P)) {
+      continue;
+    }
+    if ((uvpt[VPN(i)] & (PTE_P | PTE_SHARE)) == (PTE_P | PTE_SHARE)) {
+      err = sys_page_map(0, (void *)i, child, (void *)i, uvpt[VPN(i)] & PTE_SYSCALL);
+      if (err < 0)
+        break;
+    }
+  }
+  return err;
 }
