@@ -7,6 +7,8 @@
 #include <inc/assert.h>
 #include <inc/env.h>
 #include <inc/x86.h>
+#include <inc/dwarf.h>
+#include <inc/error.h>
 
 #include <kern/console.h>
 #include <kern/monitor.h>
@@ -39,7 +41,8 @@ static struct Command commands[] = {
     {"timer_start", "Start timer", mon_start},
     {"timer_stop", "Stop timer", mon_stop},
     {"timer_freq", "Count processor frequency", mon_frequency},
-    {"memory", "List all physical pages", mon_memory}};
+    {"memory", "List all physical pages", mon_memory},
+    {"call", "Call a C function", mon_call}};
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -188,6 +191,14 @@ runcmd(char *buf, struct Trapframe *tf) {
       return commands[i].func(argc, argv, tf);
   }
   cprintf("Unknown command '%s'\n", argv[0]);
+  return 0;
+}
+
+//itask
+int
+mon_call(int argc, char **argv, struct Trapframe *tf) {
+  //uintptr_t addr = find_function(argv[0]);
+  find_return_type(argv[0]);
   return 0;
 }
 

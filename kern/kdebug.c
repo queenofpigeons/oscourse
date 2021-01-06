@@ -136,3 +136,50 @@ find_function(const char *const fname) {
   return 0;
 }
 #endif
+
+#ifdef CONFIG_KSPACE
+uintptr_t
+find_function(const char *const fname) {
+  // There are two functions for function name lookup.
+  // address_by_fname, which looks for function name in section .debug_pubnames
+  // and naive_address_by_fname which performs full traversal of DIE tree.
+  // LAB 3: Your code here
+  struct {
+  const char *name;
+   uintptr_t addr;
+  } scentry[] = {
+    { "sys_yield", (uintptr_t)sys_yield },
+    { "sys_exit", (uintptr_t)sys_exit },
+  };
+
+  for (size_t i = 0; i < sizeof(scentry)/sizeof(*scentry); i++) {
+    if (!strcmp(scentry[i].name, fname)) {
+      return scentry[i].addr;
+    }
+  }
+
+  struct Dwarf_Addrs addrs;
+  load_kernel_dwarf_info(&addrs);
+  uintptr_t offset = 0;
+
+  if (!address_by_fname(&addrs, fname, &offset) && offset) {
+    return offset;
+  }
+
+  if (!naive_address_by_fname(&addrs, fname, &offset)) {
+    return offset;
+  }
+  return 0;
+}
+#endif
+
+int
+find_return_type(const char *const fname) {
+  struct Dwarf_Addrs addrs;
+  uint64_t tmp_cr3 = rcr3();
+  lcr3(PADDR(kern_pml4e));
+  load_kernel_dwarf_info(&addrs);
+  int res = ret_by_fname(&addrs, fname);
+  lcr3(tmp_cr3);
+  return res;
+}

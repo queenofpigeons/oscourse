@@ -138,12 +138,12 @@ endif
 # Compiler flags
 # -fno-builtin is required to avoid refs to undefined functions in the kernel.
 CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -fno-builtin -I$(TOP) -MD
-ifeq ($(D),1)
+# ifeq ($(D),1)
 CFLAGS += -O0
-else
+# else
 # Only optimize to -O1 to discourage inlining, which complicates backtraces.
-CFLAGS += -O1
-endif
+# CFLAGS += -O1
+# endif
 CFLAGS += -ffreestanding -fno-omit-frame-pointer -mno-red-zone
 CFLAGS += -Wall -Wformat=2 -Wno-unused-function -Werror -g -gpubnames
 
