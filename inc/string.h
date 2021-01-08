@@ -3,8 +3,8 @@
 
 #include <inc/types.h>
 
-int strlen(const char *s);
 int strnlen(const char *s, size_t size);
+int strlen(const char *s);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t size);
 char *strcat(char *dst, const char *src);

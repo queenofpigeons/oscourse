@@ -873,7 +873,6 @@ ret_by_fname(struct Dwarf_Addrs *addrs, const char *fname) {
   if (flen == 0)
     return 0;
 
-  int ret_void = 1;
   Dwarf_Off type_offset = 0;
   Dwarf_Off offset = 0;
   uintptr_t func_address;
@@ -935,6 +934,7 @@ ret_by_fname(struct Dwarf_Addrs *addrs, const char *fname) {
       }
       // parse subprogram DIE
       if (tag == DW_TAG_subprogram) {
+        int ret_void = 1;
         int found = 0;
         do {
           count = dwarf_read_uleb128(curr_abbrev_entry, &name);
