@@ -174,12 +174,32 @@ find_function(const char *const fname) {
 #endif
 
 int
-find_return_type(const char *const fname) {
+find_return_type(const char *fname) {
   struct Dwarf_Addrs addrs;
   uint64_t tmp_cr3 = rcr3();
   lcr3(PADDR(kern_pml4e));
   load_kernel_dwarf_info(&addrs);
+
   int res = ret_by_fname(&addrs, fname);
+  lcr3(tmp_cr3);
+  return res;
+}
+
+int
+print_arguments(char *fname) {
+  struct Dwarf_Addrs addrs;
+  uint64_t tmp_cr3 = rcr3();
+  lcr3(PADDR(kern_pml4e));
+  load_kernel_dwarf_info(&addrs);
+
+  int res;
+
+  res = ret_by_fname(&addrs, fname);
+  if (res) {
+    lcr3(tmp_cr3);
+    return res;
+  }
+  res = arguments_by_fname(&addrs, fname);
   lcr3(tmp_cr3);
   return res;
 }

@@ -47,3 +47,8 @@ args_exist:
   call libmain
 1:
   jmp 1b
+
+ .globl _my_func
+_my_func:
+  mov %rdi, %rax
+  ret

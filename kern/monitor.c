@@ -7,7 +7,6 @@
 #include <inc/assert.h>
 #include <inc/env.h>
 #include <inc/x86.h>
-#include <inc/dwarf.h>
 #include <inc/error.h>
 
 #include <kern/console.h>
@@ -20,6 +19,8 @@
 #include <kern/trap.h>
 
 #define CMDBUF_SIZE 80 // enough for one VGA text line
+
+extern int my_func(int a);
 
 struct Command {
   const char *name;
@@ -58,6 +59,7 @@ mon_help(int argc, char **argv, struct Trapframe *tf) {
 
 int
 mon_hello(int argc, char **argv, struct Trapframe *tf) {
+  //cprintf("%d\n", my_func(1));
   cprintf("Hello!\n");
   return 0;
 }
@@ -194,12 +196,105 @@ runcmd(char *buf, struct Trapframe *tf) {
   return 0;
 }
 
+void 
+pass_arg(int32_t arg, int i) {
+  asm volatile("movq %0, %%rax" : : "g" (arg) : "rax");
+  switch (i) {
+    case 0:
+      asm volatile("movq %rax , %rdi");
+      return;
+    case 1:
+      asm volatile("movq %rax , %rsi");
+      return;
+    case 2:
+      asm volatile("movq %rax , %rdx");
+      return;
+    case 3:
+      asm volatile("movq %rax , %rcx");
+      return;
+    case 4:
+      asm volatile("movq %rax , %r8");
+      return;
+    case 5:
+      asm volatile("movq %rax , %r9");
+      return;
+    default:
+      asm volatile("push %rax");
+  }
+}
 //itask
 int
 mon_call(int argc, char **argv, struct Trapframe *tf) {
-  //uintptr_t addr = find_function(argv[0]);
-  find_return_type(argv[0]);
+  char *fname = argv[1];
+  print_arguments(fname);
   return 0;
+
+  /*cprintf("%d %s\n", argc, argv[1]);
+  struct Call_type types[(argc - 2) / 2];
+  asm volatile("pushq %rbp");
+  //asm volatile("movq %rsp, %rbp");
+
+  for (int i = 2; i < argc; i += 2) {
+    asm volatile("xor %rax, %rax");
+
+    // int is_int = 0;
+    // int is_unsigned = 0;
+    // int is_str = 0;
+
+    char *type = argv[i];
+    char *val = argv[i + 1];
+    int type_i = (i - 2)/ 2;
+    if (!strcmp(type, "string")) {
+      strcpy (types[type_i].string, val);
+    } else if (!strcmp(type, "uint8_t")) {
+      return 0;
+      //types[type_i].value.u8 = (uint8_t) strtol(val, NULL, 10);
+    } else if (!strcmp(type, "uint16_t")) {
+      return 0;
+      //types[type_i].value.u16 = (uint16_t) strtol(val, NULL, 10);
+    } else if (!strcmp(type, "uint32_t")) {
+      return 0;
+      //types[type_i].value.u32 = (uint32_t) strtol(val, NULL, 10);
+    } else if (!strcmp(type, "int8_t") || !strcmp(type, "int16_t") || !strcmp(type, "int32_t")) {
+      //types[type_i].value.i8 = (int8_t) strtol(val, NULL, 10);
+      int64_t temp = strtol(val, NULL, 10);
+      switch (type_i) {
+      case 0:
+        asm volatile("movq %0 , %%rdi" : : "g" (temp));
+        break;
+      case 1:
+        asm volatile("movq %0 , %%rsi" : : "g" (temp));
+        break;
+      case 2:
+        asm volatile("movq %0 , %%rdx" : : "g" (temp));
+        break;
+      case 3:
+        asm volatile("movq %0 , %%rcx" : : "g" (temp));
+        break;
+      case 4:
+        asm volatile("movq %0 , %%r8" : : "g" (temp));
+        break;
+      case 5:
+        asm volatile("movq %0 , %%r9" : : "g" (temp));
+        break;
+      default:
+        asm volatile("push %0" : : "g" (temp));
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  uintptr_t addr = find_function(fname);
+  uint64_t func_address;
+  memcpy(&func_address, &addr, sizeof(void *));
+  asm volatile("call %P0" : : "i"(func_address));
+
+  asm volatile("popq %rbp");
+  int regVal;
+  asm("movl %%eax, %0" : "=r"(regVal) :);
+  cprintf("%d\n", regVal);
+  return 0; */
 }
 
 void
