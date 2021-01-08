@@ -45,7 +45,7 @@ int mon_start(int argc, char **argv, struct Trapframe *tf);
 int mon_stop(int argc, char **argv, struct Trapframe *tf);
 int mon_frequency(int argc, char **argv, struct Trapframe *tf);
 int mon_memory(int argc, char **argv, struct Trapframe *tf);
-int mon_call(int argc, char **argv, struct Trapframe *tf);
+int mon_types(int argc, char **argv, struct Trapframe *tf);
 void pass_arg(int32_t arg, int i);
 
 #endif // !JOS_KERN_MONITOR_H

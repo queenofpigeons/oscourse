@@ -43,7 +43,7 @@ static struct Command commands[] = {
     {"timer_stop", "Stop timer", mon_stop},
     {"timer_freq", "Count processor frequency", mon_frequency},
     {"memory", "List all physical pages", mon_memory},
-    {"call", "Call a C function", mon_call}};
+    {"types", "Call a C function", mon_types}};
 #define NCOMMANDS (sizeof(commands) / sizeof(commands[0]))
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -224,7 +224,7 @@ pass_arg(int32_t arg, int i) {
 }
 //itask
 int
-mon_call(int argc, char **argv, struct Trapframe *tf) {
+mon_types(int argc, char **argv, struct Trapframe *tf) {
   char *fname = argv[1];
   print_arguments(fname);
   return 0;
